@@ -1,6 +1,11 @@
-(ns clojure-excu-sandbox.core)
+(ns clojure-excu-sandbox.core
+  (:require [quil.core :refer :all]))
 
-(defn foo
-  "I don't do a whole lot."
-  [x]
-  (println x "Hello, World!"))
+(defn setup []
+  (smooth)
+  (background 255))
+
+(defn make-sketch! []
+  (sketch
+    :title "Clojure-excu"
+    :setup setup))
