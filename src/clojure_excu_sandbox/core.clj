@@ -2,10 +2,15 @@
   (:require [quil.core :refer :all]))
 
 (defn setup []
-  (smooth)
   (background 255))
+
+(defn draw []
+  (background 255)
+  (ellipse (mouse-x) (mouse-y) 10 10))
 
 (defn make-sketch! []
   (sketch
     :title "Clojure-excu"
-    :setup setup))
+    :size [800 600]
+    :setup #'setup
+    :draw #'draw))
