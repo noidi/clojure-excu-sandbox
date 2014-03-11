@@ -1,8 +1,9 @@
 (ns user
   (:require [clojure.tools.namespace.repl :refer [refresh]]
-            [quil.core :refer [sketch-stop sketch-start sketch-close]]
+            [quil.core :refer :all]
             [robert.hooke :refer [remove-hook add-hook]]
-            [clojure-excu-sandbox.core :refer [make-sketch! setup draw]]))
+            [clojure-excu-sandbox.core
+             :refer [make-sketch! setup draw handle-event]]))
 
 (defonce app (atom {:sketch nil
                     :state :stopped}))
@@ -44,20 +45,24 @@
              (fn [k r o n]
                (add-hook target-var key f))))
 
-(defn pause-on-exception-hook [f]
+(defn pause-on-exception-hook [f & args]
   (try
-    (f)
+    (apply f args)
     (catch Throwable t
       (pause!)
-      (throw t))))
+      (.printStackTrace t)
+      ;; Assume the first arg is the app state, and return it unmodified
+      (first args))))
 
-(defn only-when-running-hook [f]
+(defn only-when-running-hook [f & args]
   (when (= (:state @app) :running)
-    (f)))
+    (apply f args)))
 
 (keep-hooked #'setup ::pause-on-exception-hook #'pause-on-exception-hook)
 (keep-hooked #'draw ::pause-on-exception-hook #'pause-on-exception-hook)
+(keep-hooked #'handle-event ::pause-on-exception-hook #'pause-on-exception-hook)
 (keep-hooked #'draw ::only-when-running-hook #'only-when-running-hook)
+(keep-hooked #'handle-event ::only-when-running-hook #'only-when-running-hook)
 
 (defn restart! []
   (stop!)
