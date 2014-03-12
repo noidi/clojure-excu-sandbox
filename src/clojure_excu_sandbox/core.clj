@@ -8,7 +8,7 @@
             :size 10}})
 
 (defn draw [state]
-  (background 255)
+  (background 128)
   (let [[x y] (get-in state [:cursor :position])
         d (get-in state [:cursor :size])]
     (ellipse x y d d)))

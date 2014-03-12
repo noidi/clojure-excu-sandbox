@@ -1,12 +1,12 @@
 (ns user
   (:require [clojure.tools.namespace.repl :refer [refresh]]
-            [quil.core :refer :all]
+            [quil.core :refer :all, :exclude [state sketch-state]]
             [robert.hooke :refer [remove-hook add-hook]]
+            [lonocloud.synthread :as ->]
             [clojure-excu-sandbox.core
              :refer [make-sketch! setup draw handle-event]]))
 
-(defonce app (atom {:sketch nil
-                    :state :stopped}))
+(defonce app (atom {:state :stopped}))
 
 (defmacro defcommand [name & body]
   `(defn ~name
@@ -16,28 +16,31 @@
 
 (defcommand start! [app]
   (-> app
-    (update-in [:sketch] #(if % % (make-sketch!)))
-    (assoc :state :running)))
+    (->/when-not (:sketch app)
+      (->/let [[sketch sketch-state] (make-sketch!)]
+        (assoc :sketch sketch
+               :sketch-state sketch-state
+               :state :running)))))
 
 (defcommand stop! [app]
   (-> app
-    (update-in [:sketch] #(when % (sketch-close %)))
-    (assoc :state :stopped)))
+    (->/when-let [sketch (:sketch app)]
+      (->/aside _ (sketch-close sketch))
+      (dissoc :sketch))))
 
 (defcommand resume! [app]
-  (if (= (:state app) :paused)
-    (do
-      (sketch-start (:sketch app))
-      (assoc app :state :running))
-    app))
+  (-> app
+    (->/when (= (:state app) :paused)
+      (->/aside _ (sketch-start (:sketch app)))
+      (assoc :state :running))))
 
 (defcommand pause! [app]
-  (condp = (:state app)
-    :running (do
-               (sketch-stop (:sketch app))
-               (assoc app :state :paused))
-    :paused (resume! app)
-    app))
+  (-> app
+    (->/case (:state app)
+      :running (->
+                 (->/aside _ (sketch-stop (:sketch app)))
+                 (assoc :state :paused))
+      :paused resume!)))
 
 (defn keep-hooked [target-var key f]
   (add-hook target-var key f)
@@ -67,3 +70,6 @@
 (defn restart! []
   (stop!)
   (refresh :after `start!))
+
+(defn sketch-state []
+  (-> @app :sketch-state))

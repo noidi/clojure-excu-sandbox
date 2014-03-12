@@ -63,20 +63,24 @@
                           :key (last-key)
                           :pressed-keys @pressed-keys})
         handle-event! (fn [event]
-                        (swap! (state :state) (:handle-event settings) event))]
-    (->> (assoc settings
-           :mouse-moved #(handle-event! (mouse-position-event :mouse-moved))
-           :mouse-clicked #(handle-event! (mouse-button-event :mouse-clicked))
-           :mouse-pressed #(handle-event! (mouse-button-event :mouse-pressed))
-           :mouse-released #(handle-event! (mouse-button-event :mouse-released))
-           :key-pressed #(do
-                           (swap! pressed-keys conj (last-key))
-                           (handle-event! (keyboard-event :key-pressed)))
-           :key-released #(do
-                            (swap! pressed-keys disj (last-key))
-                            (handle-event! (keyboard-event :key-released)))
-           :key-typed #(handle-event! (keyboard-event :key-released))
-           :setup #(set-state! :state (atom ((:setup settings))))
-           :draw #((:draw settings) @(state :state)))
-      (apply concat)
-      (apply sketch))))
+                        (swap! (state :state) (:handle-event settings) event))
+        sketch-state (atom nil)
+        sketch (apply sketch
+                 (apply concat
+                   (assoc settings
+                     :mouse-moved #(handle-event! (mouse-position-event :mouse-moved))
+                     :mouse-clicked #(handle-event! (mouse-button-event :mouse-clicked))
+                     :mouse-pressed #(handle-event! (mouse-button-event :mouse-pressed))
+                     :mouse-released #(handle-event! (mouse-button-event :mouse-released))
+                     :key-pressed #(do
+                                     (swap! pressed-keys conj (last-key))
+                                     (handle-event! (keyboard-event :key-pressed)))
+                     :key-released #(do
+                                      (swap! pressed-keys disj (last-key))
+                                      (handle-event! (keyboard-event :key-released)))
+                     :key-typed #(handle-event! (keyboard-event :key-released))
+                     :setup #(do
+                               (reset! sketch-state ((:setup settings)))
+                               (set-state! :state sketch-state))
+                     :draw #((:draw settings) @sketch-state))))]
+    [sketch sketch-state]))
